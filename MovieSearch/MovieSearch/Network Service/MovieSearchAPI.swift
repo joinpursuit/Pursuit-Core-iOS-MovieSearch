@@ -14,30 +14,36 @@ enum MovieAPIError: Error {
   case decodingError(Error) // associative types
 }
 
+protocol MovieSearchAPIDelegate: class {
+  func didFinishFetchingMovies(_ movieSearchAPI: MovieSearchAPI, _ movies: [Movie])
+  func didRecieveErrorFetchingMovies(_ movieSearchAPI: MovieSearchAPI, _ movieApiError: MovieAPIError)
+}
+
 // marking final since no one else needs to subclass
 final class MovieSearchAPI {
+  // create a delegate property to be used to set delegate methods as apporopriate
+  // conforming types will set themselves as the delegate when using the MovieSearchAPIDelegate
+  weak var delegate: MovieSearchAPIDelegate?
   
   // search for a movie by keyword
-  static func search(keyword: String, completion: @escaping(MovieAPIError?, [Movie]?) -> Void) {
+  func search(keyword: String) {
     // this the iTunes Movie Search endpoint
     let urlString = "https://itunes.apple.com/search?media=movie&term=\(keyword)&limit=100"
     guard let url = URL(string: urlString) else {
-      completion(MovieAPIError.badURL("malformatted url"), nil)
       return
     }
     URLSession.shared.dataTask(with: url) { (data, response, error) in
       if let error = error {
-        completion(MovieAPIError.networkError(error), nil)
+        self.delegate?.didRecieveErrorFetchingMovies(self, MovieAPIError.networkError(error))
       } else if let data = data {
         do {
           let resultData = try JSONDecoder().decode(SearchData.self, from: data)
-          completion(nil, resultData.results)
+          self.delegate?.didFinishFetchingMovies(self, resultData.results)
         } catch {
-          completion(MovieAPIError.decodingError(error), nil)
+          self.delegate?.didRecieveErrorFetchingMovies(self, MovieAPIError.decodingError(error))
         }
       }
     }.resume() // resumes the task if it's suspended
   }
-  
 }
 

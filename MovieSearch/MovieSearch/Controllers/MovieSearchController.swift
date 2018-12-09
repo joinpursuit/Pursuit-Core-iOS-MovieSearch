@@ -22,10 +22,13 @@ class MovieSearchController: UIViewController {
     }
   }
   
+  private var movieSearchAPI = MovieSearchAPI()
+  
   override func viewDidLoad() {
     super.viewDidLoad()
     tableView.dataSource = self
     searchBar.delegate = self
+    movieSearchAPI.delegate = self
     searchMovies(keyword: "holiday") // default movie search
   }
   
@@ -45,16 +48,17 @@ class MovieSearchController: UIViewController {
   
   private func searchMovies(keyword: String) {
     guard let encodedKeyword = keyword.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else { return }
-    MovieSearchAPI.search(keyword: encodedKeyword) { (error, movies) in
-      if let error = error {
-        // we're on the background thread so need to dispatch back to the main thread
-        DispatchQueue.main.async {
-          self.showAlert(title: "Error", message: "\(error.localizedDescription)")
-        }
-      } else if let movies = movies {
-        self.movies = movies
-      }
-    }
+    movieSearchAPI.search(keyword: encodedKeyword)
+  }
+}
+
+extension MovieSearchController: MovieSearchAPIDelegate {
+  func didFinishFetchingMovies(_ movieSearchAPI: MovieSearchAPI, _ movies: [Movie]) {
+    self.movies = movies
+  }
+  
+  func didRecieveErrorFetchingMovies(_ movieSearchAPI: MovieSearchAPI, _ movieApiError: MovieAPIError) {
+    showAlert(title: "Movie Search Error", message: "\(movieApiError)")
   }
 }
 
