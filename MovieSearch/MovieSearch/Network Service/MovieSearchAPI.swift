@@ -30,7 +30,8 @@ final class MovieSearchAPI {
     // this the iTunes Movie Search endpoint
     let urlString = "https://itunes.apple.com/search?media=movie&term=\(keyword)&limit=100"
     guard let url = URL(string: urlString) else {
-      return
+      self.delegate?.didRecieveErrorFetchingMovies(self, MovieAPIError.badURL("bad url: \(urlString)"))
+      return 
     }
     URLSession.shared.dataTask(with: url) { (data, response, error) in
       if let error = error {
